@@ -5,11 +5,10 @@ namespace lajtBot {
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Forms;
 using DotNetEnv;
@@ -50,7 +49,7 @@ public class Program {
     [STAThread]
     private static void Main( string[] args ) {
         Form mainForm = new() {
-            Icon = Icon.ExtractAssociatedIcon( Assembly.GetExecutingAssembly().Location ),
+            Icon = Icon.ExtractAssociatedIcon( Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty ),
             Size = new Size( 0, 0 ),
             StartPosition = FormStartPosition.Manual,
             Location = new Point( 0, 0 ),

@@ -1,23 +1,33 @@
-﻿namespace lajtBot {
+﻿// ReSharper disable UnassignedField.Global
+// ReSharper disable JoinDeclarationAndInitializer
+
+namespace lajtBot {
 
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using DotNetEnv;
+
+public static class HttpStatusCodeExtensions {
+    public static bool isOK( this HttpStatusCode httpStatusCode ) {
+        return httpStatusCode == HttpStatusCode.OK;
+    }
+}
 
 public class UriRelative : Uri {
     public UriRelative( string uriString ) : base( uriString, UriKind.Relative ) {
     }
 }
 
-public class Usage {
+public record Usage {
     public UsageData data;
     public int code;
     public string message;
 }
 
-public class UsageData {
+public record UsageData {
     public string main_remaining_units;
     public string second_remaining_units;
 
@@ -50,7 +60,7 @@ public class Program {
             } )
         };
         responseMessage = httpClient.Send( requestMessage );
-        if ( (int) responseMessage.StatusCode != 200 ) {
+        if ( !responseMessage.StatusCode.isOK() ) {
             throw new HttpRequestException( responseMessage.ToString() );
         }
 
@@ -59,7 +69,7 @@ public class Program {
         };
         responseMessage = httpClient.Send( requestMessage );
 
-        if ( (int) responseMessage.StatusCode != 200 ) {
+        if ( !responseMessage.StatusCode.isOK() ) {
             throw new HttpRequestException( responseMessage.ToString() );
         }
 
@@ -69,8 +79,8 @@ public class Program {
         };
         var usage = JsonSerializer.Deserialize<Usage>( usageJson, jsonSerializerOptions );
 
-        if ( usage.message != "success" ) {
-            throw new HttpRequestException( "usage.message != \"success\"" );
+        if ( usage is not { message: "success" } ) {
+            throw new HttpRequestException( "usage.message not present in response" );
         }
 
         Console.WriteLine( usage.data );

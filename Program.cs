@@ -5,8 +5,11 @@ namespace lajtBot {
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Forms;
 using DotNetEnv;
@@ -46,6 +49,14 @@ public class Program {
 
     [STAThread]
     private static void Main( string[] args ) {
+        Form mainForm = new() {
+            Icon = Icon.ExtractAssociatedIcon( Assembly.GetExecutingAssembly().Location ),
+            Size = new Size( 0, 0 ),
+            StartPosition = FormStartPosition.Manual,
+            Location = new Point( 0, 0 ),
+        };
+        mainForm.Show();
+
         env = Env.TraversePath().NoEnvVars().Load().ToDictionary();
 
         httpClient.BaseAddress = new Uri( "https://lajt-online.pl/" );
@@ -60,13 +71,14 @@ public class Program {
             Console.WriteLine( usage.data );
 
             dialogResult = MessageBox.Show(
+                mainForm,
                 $"{usage.data}",
                 AppDomain.CurrentDomain.FriendlyName,
                 MessageBoxButtons.RetryCancel,
                 MessageBoxIcon.Information
             );
         } while ( dialogResult == DialogResult.Retry );
-        
+
         // end
     }
 

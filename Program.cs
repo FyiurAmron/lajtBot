@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using System.Windows.Forms;
 using DotNetEnv;
 
 public static class HttpStatusCodeExtensions {
@@ -33,21 +34,43 @@ public record UsageData {
 
     public override string ToString() {
         return
-            $"remaining day: {main_remaining_units} / 100 GB \t remaining night: (01-08AM) {second_remaining_units} / 200 GB";
+            $"remaining day: {main_remaining_units} / 100 GB\n" +
+            $"remaining night: (01-08AM) {second_remaining_units} / 200 GB";
     }
 }
 
 public class Program {
     private static readonly HttpClient httpClient = new();
 
+    private static Dictionary<string, string> env;
+
+    [STAThread]
     private static void Main( string[] args ) {
-        Dictionary<string, string> env = Env.TraversePath().NoEnvVars().Load().ToDictionary();
+        env = Env.TraversePath().NoEnvVars().Load().ToDictionary();
 
         httpClient.BaseAddress = new Uri( "https://lajt-online.pl/" );
         var defaultRequestHeaders = httpClient.DefaultRequestHeaders;
         defaultRequestHeaders.Add( "X-Requested-With", "XMLHttpRequest" );
         defaultRequestHeaders.Add( "Brand", "lajt-online.pl" );
 
+        DialogResult dialogResult;
+        do {
+            Usage usage = fetchUsage();
+
+            Console.WriteLine( usage.data );
+
+            dialogResult = MessageBox.Show(
+                $"{usage.data}",
+                AppDomain.CurrentDomain.FriendlyName,
+                MessageBoxButtons.RetryCancel,
+                MessageBoxIcon.Information
+            );
+        } while ( dialogResult == DialogResult.Retry );
+        
+        // end
+    }
+
+    private static Usage fetchUsage() {
         HttpRequestMessage requestMessage;
         HttpResponseMessage responseMessage;
 
@@ -83,7 +106,7 @@ public class Program {
             throw new HttpRequestException( "usage.message not present in response" );
         }
 
-        Console.WriteLine( usage.data );
+        return usage;
     }
 }
 

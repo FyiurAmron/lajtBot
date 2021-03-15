@@ -7,14 +7,17 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
 using System.Windows.Forms;
+
 using DotNetEnv;
 
 public static class HttpStatusCodeExtensions {
-    public static bool isOK( this HttpStatusCode httpStatusCode ) {
+    public static bool isOk( this HttpStatusCode httpStatusCode ) {
         return httpStatusCode == HttpStatusCode.OK;
     }
 }
@@ -41,6 +44,31 @@ public record UsageData {
     }
 }
 
+public static class DebuggingExtensions {
+    public static string toString<T>( this IEnumerable<T> iEnumerable ) {
+        return string.Join( ",", iEnumerable );
+    }
+
+    public static string toString( this ParameterInfo parameterInfo ) {
+        return $"{parameterInfo.ParameterType.Name} {parameterInfo.Name}";
+    }
+
+    public static string toString( this MethodBase methodBase ) {
+        return $"{methodBase.Name}({methodBase.GetParameters().Select( p => p.toString() ).toString()})";
+    }
+
+    public static string toString( this StackFrame stackFrame ) {
+        return ( stackFrame == null )
+            ? "NO STACK FRAME!"
+            : $"{stackFrame.GetMethod().toString()}"
+            + $" @ {stackFrame.GetFileName()} : L{stackFrame.GetFileLineNumber()}:C{stackFrame.GetFileColumnNumber()}";
+    }
+
+    public static StackFrame GetFrame( this Exception ex, int index ) {
+        return new StackTrace( ex, true ).GetFrame( index );
+    }
+}
+
 public class Program {
     private static readonly HttpClient httpClient = new();
 
@@ -48,16 +76,32 @@ public class Program {
 
     [STAThread]
     private static void Main( string[] args ) {
-        Form mainForm = new() {
-            Icon = Icon.ExtractAssociatedIcon( Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty ),
-            Size = new Size( 0, 0 ),
-            StartPosition = FormStartPosition.Manual,
-            Location = new Point( 0, 0 ),
-        };
-        mainForm.Show();
+        Form mainForm = null;
+        try {
+            mainForm = new() {
+                Icon = Icon.ExtractAssociatedIcon( Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty ),
+                Size = new Size( 0, 0 ),
+                StartPosition = FormStartPosition.Manual,
+                Location = new Point( 0, 0 ),
+            };
+            mainForm.Show();
+            runApp( mainForm );
+        } catch ( Exception ex ) {
+            MessageBox.Show(
+                mainForm,
+                ex.Message,
+                $"{AppDomain.CurrentDomain.FriendlyName}" +
+                $" @ {ex.GetFrame( 0 ).toString()}",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
+    }
 
+    private static void runApp( Form mainForm ) {
         env = Env.TraversePath().NoEnvVars().Load().ToDictionary();
 
+        httpClient.Timeout = TimeSpan.FromSeconds( 10 );
         httpClient.BaseAddress = new Uri( "https://lajt-online.pl/" );
         var defaultRequestHeaders = httpClient.DefaultRequestHeaders;
         defaultRequestHeaders.Add( "X-Requested-With", "XMLHttpRequest" );
@@ -86,7 +130,7 @@ public class Program {
         HttpResponseMessage responseMessage;
 
         requestMessage = new HttpRequestMessage {
-            RequestUri = new UriRelative( $"api/authenticate" ),
+            RequestUri = new UriRelative( "api/authenticate" ),
             Method = HttpMethod.Post,
             Content = new FormUrlEncodedContent( new Dictionary<string, string>() {
                 ["number"] = env["NUMBER"],
@@ -94,7 +138,7 @@ public class Program {
             } )
         };
         responseMessage = httpClient.Send( requestMessage );
-        if ( !responseMessage.StatusCode.isOK() ) {
+        if ( !responseMessage.StatusCode.isOk() ) {
             throw new HttpRequestException( responseMessage.ToString() );
         }
 
@@ -103,7 +147,7 @@ public class Program {
         };
         responseMessage = httpClient.Send( requestMessage );
 
-        if ( !responseMessage.StatusCode.isOK() ) {
+        if ( !responseMessage.StatusCode.isOk() ) {
             throw new HttpRequestException( responseMessage.ToString() );
         }
 

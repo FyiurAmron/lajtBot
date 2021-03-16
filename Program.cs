@@ -74,6 +74,8 @@ public class Program {
 
     private static Dictionary<string, string> env;
 
+    private static string appName = AppDomain.CurrentDomain.FriendlyName; 
+
     [STAThread]
     private static void Main( string[] args ) {
         Form mainForm = null;
@@ -83,6 +85,7 @@ public class Program {
                 Size = new Size( 0, 0 ),
                 StartPosition = FormStartPosition.Manual,
                 Location = new Point( 0, 0 ),
+                Text = appName,
             };
             mainForm.Show();
             runApp( mainForm );
@@ -90,8 +93,7 @@ public class Program {
             MessageBox.Show(
                 mainForm,
                 ex.Message,
-                $"{AppDomain.CurrentDomain.FriendlyName}" +
-                $" @ {ex.GetFrame( 0 ).toString()}",
+                $"{appName} @ {ex.GetFrame( 0 ).toString()}",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error
             );
@@ -116,7 +118,7 @@ public class Program {
             dialogResult = MessageBox.Show(
                 mainForm,
                 $"{usage.data}",
-                AppDomain.CurrentDomain.FriendlyName,
+                appName,
                 MessageBoxButtons.RetryCancel,
                 MessageBoxIcon.Information
             );
